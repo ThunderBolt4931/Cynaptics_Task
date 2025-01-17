@@ -8,15 +8,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm.auto import tqdm
 
-# Hyperparameters
 z_dim = 128
 lr = 0.0002
 batch_size = 128
 epochs = 50
 image_size = 64
 channels_img = 3
-features_gen = 128  # Increased features
-features_disc = 128  # Increased features
+features_gen = 128 
+features_disc = 128 
 num_classes = 10
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -36,7 +35,6 @@ def show(tensor, num=25):
     plt.imshow(grid.cpu().numpy())
     plt.show()
 
-# Generator
 class Generator(nn.Module):
     def __init__(self, z_dim, channels_img, features_gen):
         super(Generator, self).__init__()
@@ -61,7 +59,6 @@ class Generator(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-# Discriminator
 class Discriminator(nn.Module):
     def __init__(self, channels_img, features_disc):
         super(Discriminator, self).__init__()
@@ -74,7 +71,6 @@ class Discriminator(nn.Module):
             nn.Flatten(),
         )
 
-        # Classification Head
         self.classifier = nn.Sequential(
             nn.Linear(features_disc * 8 * (image_size // 16) * (image_size // 16), num_classes),
         )
@@ -99,24 +95,20 @@ class Discriminator(nn.Module):
         adversarial_logits = self.adv_head(features_flattened)
         return adversarial_logits, classification_logits
 
-# Initialize models
 gen = Generator(z_dim, channels_img, features_gen).to(device)
 disc = Discriminator(channels_img, features_disc).to(device)
 
-# Optimizers and Loss
 opt_gen = torch.optim.Adam(gen.parameters(), lr=lr, betas=(0.5, 0.999))
 opt_disc = torch.optim.Adam(disc.parameters(), lr=lr, betas=(0.5, 0.999))
 loss_fn = nn.BCEWithLogitsLoss()
 cls_loss_fn = nn.CrossEntropyLoss()
 
-# Training Loop
 for epoch in range(epochs):
     for batch_idx, (real, labels) in enumerate(tqdm(dataloader)):
         real = real.to(device)
         labels = labels.to(device)
         cur_batch_size = real.size(0)
 
-        # Train Discriminator
         noise = torch.randn(cur_batch_size, z_dim, 1, 1).to(device)
         fake = gen(noise)
 
@@ -132,7 +124,6 @@ for epoch in range(epochs):
         disc_loss.backward()  # backpropagate the loss
         opt_disc.step() # Update discriminator weights
 
-        # Train Generator
         fake_disc, _ = disc(fake)
         gen_loss = loss_fn(fake_disc, torch.ones_like(fake_disc))
 
@@ -142,7 +133,6 @@ for epoch in range(epochs):
 
     print(f"Epoch [{epoch}/{epochs}] | D Loss: {disc_loss:.4f} | G Loss: {gen_loss:.4f}")
 
-# Generate and Show Samples
 noise = torch.randn(25, z_dim, 1, 1).to(device)
 fake_images = gen(noise)
 show(fake_images)
